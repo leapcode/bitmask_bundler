@@ -16,8 +16,8 @@ builds.
 * (optional) configure `sudo` for your non-root user,
 * patience.
 
-The script uses `sudo` which is installed by default on Debian, but you need to
-configure your non-root user to be able to use `sudo`.
+The script uses `sudo` which is installed on most Debian systems, but you need
+to configure your non-root user to be able to use `sudo`.
 
 Edit the `/etc/sudoers` file and add this line at the bottom:
 `leap ALL=NOPASSWD: ALL`
