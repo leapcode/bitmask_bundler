@@ -126,7 +126,7 @@ copy_binaries() {
 create_bundler_paths() {
     cd $BASE
     cat > bundler.paths << EOF
-$BASE/bundler.git/bundler
+$BASE/bitmask_bundler.git/bundler
 /usr/lib/python2.7
 /usr/lib/python2.7/plat-linux2
 /usr/lib/python2.7/lib-tk
@@ -142,7 +142,7 @@ EOF
 setup_bundler() {
     cd $BASE
 
-    git clone https://github.com/chiiph/bundler.git bundler.git
+    git clone https://github.com/leapcode/bitmask_bundler.git bitmask_bundler.git
     virtualenv bundler.venv && source bundler.venv/bin/activate
 
     # install dependencies by hand...
@@ -153,7 +153,7 @@ setup_bundler() {
     cd protobuf-socket-rpc.git
     python setup.py easy_install -Z .
 
-    pip install -r $BASE/bundler.git/pkg/requirements.pip
+    pip install -r $BASE/bitmask_bundler.git/pkg/requirements.pip
 }
 
 run_bundler() {
@@ -166,8 +166,8 @@ run_bundler() {
     set_pyside_environment
 
     mkdir bundler.output
-    python bundler.git/bundler/main.py --workon bundler.output --binaries binaries/ --paths-file bundler.paths --do gitclone pythonsetup $VERSION
-    python bundler.git/bundler/main.py --workon bundler.output --binaries binaries/ --paths-file bundler.paths --skip gitclone pythonsetup $VERSION
+    python bitmask_bundler.git/bundler/main.py --workon bundler.output --binaries binaries/ --paths-file bundler.paths --do gitclone pythonsetup $VERSION
+    python bitmask_bundler.git/bundler/main.py --workon bundler.output --binaries binaries/ --paths-file bundler.paths --skip gitclone pythonsetup $VERSION
 }
 
 [[ "$1" == 'nightly' ]] && VERSION='--nightly'
