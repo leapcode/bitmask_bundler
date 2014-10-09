@@ -35,13 +35,15 @@ cc_normal="${esc}[39m"
 
 show_help() {
 cat << EOF
-Usage: ${0##*/} [-h] [-s] [-a (32|64)] -v VERSION
+Usage: ${0##*/} [-h] [-r FILE] [-s] [-a (32|64)] -v VERSION -k KEY_FILE
 Do stuff for version VERSION and arch ARCH.
 
-    -h          display this help and exit.
-    -a ARCH     do the tuf stuff for that ARCH, 32 or 64 bits. The default is '64'.
-    -s          run the setup process, create virtualenv and install dependencies.
-    -v VERSION  version to work with. This is a mandatory argument.
+    -h           display this help and exit.
+    -a ARCH      do the tuf stuff for that ARCH, 32 or 64 bits. The default is '64'.
+    -k KEY_FILE  use this key file to sign the release
+    -r FILE      use particular repo/ file to do the tuf stuff. FILE must be a .tar.gz file.
+    -s           run the setup process, create virtualenv and install dependencies.
+    -v VERSION   version to work with. This is a mandatory argument.
 EOF
 }
 
@@ -50,8 +52,9 @@ get_args() {
     local OPTIND
 
     ARCH="64"
+    SETUP="NO"
 
-    while getopts "hsv:a:" opt; do
+    while getopts "hr:sv:a:k:" opt; do
         case "$opt" in
             h)
                 show_help
@@ -59,7 +62,11 @@ get_args() {
                 ;;
             v)  VERSION=$OPTARG
                 ;;
+            r)  REPO=`realpath $OPTARG`
+                ;;
             s)  SETUP='YES'
+                ;;
+            k)  KEY_FILE=`realpath $OPTARG`
                 ;;
             a)  ARCH=$OPTARG
                 ;;
@@ -72,10 +79,24 @@ get_args() {
     shift "$((OPTIND-1))" # Shift off the options and optional --.
 
     if [[ -z $VERSION ]]; then
-        echo 'Missing -v flag'
+        echo 'Error: missing -v flag'
         show_help
         exit 1
     fi
+    if [[ -z $KEY_FILE ]]; then
+        echo 'Error: missing -k flag'
+        show_help
+        exit 1
+    fi
+
+    echo "---------- settings ----------"
+    echo "Arch: $ARCH"
+    echo "Key: $KEY_FILE"
+    echo "Repo: $REPO"
+    echo "Setup: $SETUP"
+    echo "Version: $VERSION"
+    echo "--------------------"
+    read -p "Press <Enter> to continue, <Ctrl>+C to exit. "
 }
 
 # ----------------------------------------
@@ -88,7 +109,6 @@ do_init(){
     VENVDIR=$WORKDIR/tuf.venv
 
     BITMASK="Bitmask-linux$ARCH-$VERSION"
-    KEY="$BASE/tuf_private_key.pem"
     RELEASE=$BASE/../bitmask_client/pkg/tuf/release.py
 
     # Initialize path
@@ -121,10 +141,16 @@ do_tuf_stuff() {
         TUF_ARCH='linux-i386'
     fi
 
-    # Download old repo metadata
-    echo "${cc_yellow}-> Downloading metadata files from the old bundle...${cc_normal}"
-    wget --quiet --recursive --no-host-directories --cut-dirs=2 --no-parent --reject "index.html*" https://dl.bitmask.net/tuf/$TUF_ARCH/metadata/
-    mv metadata metadata.staged
+    if [[ -z $REPO ]]; then
+        # Download old repo metadata
+        echo "${cc_yellow}-> Downloading metadata files from the old bundle...${cc_normal}"
+        wget --quiet --recursive --no-host-directories --cut-dirs=2 --no-parent --reject "index.html*" https://dl.bitmask.net/tuf/$TUF_ARCH/metadata/
+        mv metadata metadata.staged
+    else
+        echo "${cc_yellow}-> Extracting metadata files from the repo file...${cc_normal}"
+        # we need that specific folder without the repo/ parent path
+        tar xzf $REPO repo/metadata.staged/ --strip-components=1
+    fi
 
     echo "${cc_yellow}-> Uncompressing bundle and moving to its place...${cc_normal}"
     tar xjf $BASE/$BITMASK.tar.bz2  # fresh bundled bundle
@@ -133,7 +159,7 @@ do_tuf_stuff() {
     mv $BITMASK targets
 
     echo "${cc_yellow}-> Doing release magic...${cc_normal}"
-    $RELEASE $WORKDIR/repo $KEY
+    $RELEASE $WORKDIR/repo $KEY_FILE
 
     echo "${cc_yellow}-> Creating output file...${cc_normal}"
     cd $WORKDIR
@@ -147,7 +173,7 @@ get_args $@
 
 do_init
 
-if [[ -n $SETUP ]]; then
+if [[ $SETUP == 'YES' ]]; then
     do_setup
 else
     if [[ ! -f $VENVDIR/bin/activate ]]; then
