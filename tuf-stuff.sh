@@ -109,7 +109,15 @@ do_init(){
     VENVDIR=$WORKDIR/tuf.venv
 
     BITMASK="Bitmask-linux$ARCH-$VERSION"
-    RELEASE=$BASE/../bitmask_client/pkg/tuf/release.py
+    RELEASE=$BASE/release.py
+
+    if [[ ! -f $RELEASE ]]; then
+        echo "ERROR: you need to copy the release.py file into this directory."
+    fi
+
+    if [[ ! -f $KEY_FILE ]]; then
+        echo "ERROR: the specified key file does not exist."
+    fi
 
     # Initialize path
     mkdir -p $WORKDIR
