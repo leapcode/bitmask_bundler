@@ -172,14 +172,12 @@ run_bundler() {
     # Use a shortcut for the bundler command
     bundler="python bitmask_bundler.git/bundler/main.py --workon bundler.output --binaries binaries/ --paths-file bundler.paths"
 
-    $bundler --do gitclone
-    $bundler --do gitcheckout --versions-file $BASE/bitmask.json
+    $bundler --do gitclone --versions-file $BASE/../bitmask.json
+    $bundler --do gitcheckout --versions-file $BASE/../bitmask.json
 
-    $bundler --do pythonsetup
-    $bundler --skip gitclone gitcheckout pythonsetup --versions-file $BASE/bitmask.json
+    $bundler --do pythonsetup --versions-file $BASE/../bitmask.json
+    $bundler --skip gitclone gitcheckout pythonsetup --versions-file $BASE/../bitmask.json
 }
-
-[[ "$1" == 'nightly' ]] && VERSION='--nightly'
 
 REUSE_BINARIES=$BASE/reuse-binaries.lock
 

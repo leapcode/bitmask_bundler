@@ -4,17 +4,18 @@
 #  - Create complete bundle changelog
 
 import argparse
+import json
 import os
 import tempfile
 
 from contextlib import contextmanager
 from distutils import dir_util
 
-from actions import GitCloneAll, PythonSetupAll, CreateDirStructure
+from actions import GitCloneAll, GitCheckout, PythonSetupAll
 from actions import CollectAllDeps, CopyBinaries, PLister, SeededConfig
 from actions import DarwinLauncher, CopyAssets, CopyMisc, FixDylibs
 from actions import DmgIt, PycRemover, TarballIt, MtEmAll, ZipIt, SignIt
-from actions import RemoveUnused
+from actions import RemoveUnused, CreateDirStructure
 
 from utils import IS_MAC, IS_WIN
 
@@ -40,15 +41,37 @@ def new_build_dir(default=None):
         dir_util.remove_tree(bd)
 
 
+def get_version(versions_file):
+    """
+    Return the "version" data on the json file given as parameter.
+
+    :param versions_file: the file name of the json to parse.
+    :type versions_file: str
+
+    :rtype: str or None
+    """
+    version = None
+    try:
+        versions = None
+        with open(versions_file, 'r') as f:
+            versions = json.load(f)
+
+        version = versions.get("version")
+    except Exception as e:
+        print "Problem getting version: {0!r}".format(e)
+
+    return version
+
+
 def main():
     parser = argparse.ArgumentParser(description='Bundle creation tool.')
     parser.add_argument('--workon', help="")
     parser.add_argument('--skip', nargs="*", default=[], help="")
     parser.add_argument('--do', nargs="*", default=[], help="")
     parser.add_argument('--paths-file', help="")
+    parser.add_argument('--versions-file', help="")
     parser.add_argument('--binaries', help="")
     parser.add_argument('--seeded-config', help="")
-    parser.add_argument('--nightly', action="store_true", help="")
     parser.add_argument('--codesign', default="", help="")
 
     args = parser.parse_args()
@@ -63,6 +86,11 @@ def main():
         "specify a binaries path"
     binaries_path = os.path.realpath(args.binaries)
 
+    assert args.versions_file is not None, \
+        "You need to specify a versions file with the versions to use " \
+        "for each package."
+    versions_path = os.path.realpath(args.versions_file)
+
     seeded_config = None
     if args.seeded_config is not None:
         seeded_config = os.path.realpath(args.seeded_config)
@@ -74,7 +102,11 @@ def main():
             return t(bd, args.skip, args.do)
 
         gc = init(GitCloneAll)
-        gc.run(sorted_repos, args.nightly)
+        gc.run(sorted_repos)
+
+        # NOTE: NEW...
+        gco = init(GitCheckout)
+        gco.run(sorted_repos, versions_path)
 
         ps = init(PythonSetupAll)
         ps.run(sorted_repos, binaries_path)
@@ -117,17 +149,19 @@ def main():
             sc = init(SeededConfig)
             sc.run(seeded_config)
 
+        version = get_version(versions_path)
+
         if IS_MAC:
             dm = init(DmgIt)
-            dm.run(sorted_repos, args.nightly)
+            dm.run(sorted_repos, version)
         elif IS_WIN:
             zi = init(ZipIt)
-            zi.run(sorted_repos, args.nightly)
+            zi.run(sorted_repos, version)
         else:
             ru = init(RemoveUnused)
             ru.run()
             ti = init(TarballIt)
-            ti.run(sorted_repos, args.nightly)
+            ti.run(sorted_repos, version)
 
         # do manifest on windows
 
