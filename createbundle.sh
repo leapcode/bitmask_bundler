@@ -146,6 +146,10 @@ setup_bundler() {
     git clone https://github.com/leapcode/bitmask_bundler.git bitmask_bundler.git
     virtualenv bundler.venv && source bundler.venv/bin/activate
 
+    # HACK: install these dependencies manually since they can't be installed normally due not passing some pip checks.
+    pip install --upgrade pip
+    pip install --allow-external u1db --allow-unverified u1db --allow-external dirspec --allow-unverified dirspec u1db dirspec
+
     git clone https://github.com/chiiph/protobuf-socket-rpc protobuf-socket-rpc.git
     cd protobuf-socket-rpc.git
     python setup.py easy_install -Z .
