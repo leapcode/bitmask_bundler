@@ -40,6 +40,11 @@
 set -e  # Exit immediately if a command exits with a non-zero status.
 
 BASE='/home/leap/bitmask.bundle'
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}"  )" && pwd  )"
+VERSIONS_FILE="$SCRIPT_DIR/bitmask.json"
+BINARY_COPIER="$SCRIPT_DIR/copy-binaries.sh"
+
 mkdir -p $BASE
 
 # Note: we could use:
@@ -121,7 +126,7 @@ set_pyside_environment() {
 
 copy_binaries() {
     cd $BASE
-    ../copy-binaries.sh
+    $BINARY_COPIER
 }
 
 create_bundler_paths() {
@@ -174,16 +179,26 @@ run_bundler() {
     mkdir bundler.output
 
     # Use a shortcut for the bundler command
-    bundler="python bitmask_bundler.git/bundler/main.py --workon bundler.output --binaries binaries/ --paths-file bundler.paths"
+    bundler="python bitmask_bundler.git/bundler/main.py --workon bundler.output --binaries binaries/ --paths-file bundler.paths --versions-file $VERSIONS_FILE"
 
-    $bundler --do gitclone --versions-file $BASE/../bitmask.json
-    $bundler --do gitcheckout --versions-file $BASE/../bitmask.json
+    $bundler --do gitclone
+    $bundler --do gitcheckout
 
-    $bundler --do pythonsetup --versions-file $BASE/../bitmask.json
-    $bundler --skip gitclone gitcheckout pythonsetup --versions-file $BASE/../bitmask.json
+    $bundler --do pythonsetup
+    $bundler --skip gitclone gitcheckout pythonsetup
 }
 
 REUSE_BINARIES=$BASE/reuse-binaries.lock
+
+if [[ ! -f $BINARY_COPIER ]]; then
+    echo "ERROR: missing $BINARY_COPIER file."
+    exit 1
+fi
+
+if [[ ! -f $VERSIONS_FILE ]]; then
+    echo "ERROR: missing $VERSIONS_FILE file."
+    exit 1
+fi
 
 if [[ ! -f $REUSE_BINARIES ]]; then
     install_dependencies
