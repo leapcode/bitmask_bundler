@@ -35,11 +35,17 @@ shouldn't be a problem.
 You need to copy the scripts `createbundle.sh` and `copy-binaries.sh` to a VM
 and run `./createbundle.sh`, after that it should be all automagically
 processed.
-
-You can start the script with the parameter `nightly` to build a bundle from
-the latest `develop` code, otherwise it will bundle from the latest tag.
+As an input for the `createbundle.sh` script you need to have a `bitmask.json`
+file in the same folder, there is an example file on this repo, you can use it
+as a template. There is a json file named `bitmask-nightly.json` that is meant
+to be used to create a bundle combining all the `develop` branches.
 
 The resulting bundle will be saved in:
 `/home/leap/bitmask.bundle/bundle.output/` under some name like
 `Bitmask-linux64-2014-09-24-9b3b7f6f.tar.bz2` in case of bundling a *nightly*
 release, or `Bitmask-linux64-0.7.0.tar.bz2` in case of a *normal* release.
+
+After the bundling process finishes it creates a file named
+`reuse-binaries.lock` that if you don't delete it, the bundler will reuse the
+compiled libraries and binaries (like `openvpn` and `PySide`) saving a lot of
+time the next time that a bundler is executed.
