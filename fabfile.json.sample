@@ -1,0 +1,9 @@
+{
+  "hosts": ["example.org"],
+  "port": "22",
+  "release": "(stable|unstable)",
+  "repo_file": "Bitmask-linux64-0.7.0rc6-tuf.tar.bz2",
+  "tuf_arch": "(32|64)",
+  "tuf_path": "/absolute/path/to/the/tuf/repo/",
+  "user": "the-tuf-user"
+}

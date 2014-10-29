@@ -35,3 +35,5 @@ data/bitmask.pro
 binaries
 bundler.paths
 seeded_config
+
+fabfile.json
