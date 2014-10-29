@@ -41,6 +41,19 @@ def new_build_dir(default=None):
         dir_util.remove_tree(bd)
 
 
+def _get_dict_from_json(json_file):
+    data = {}
+
+    try:
+        with open(json_file, 'r') as f:
+            data = json.load(f)
+    except Exception as e:
+        print "Problem loading json: {0!r}".format(e)
+        pass
+
+    return data
+
+
 def get_version(versions_file):
     """
     Return the "version" data on the json file given as parameter.
@@ -50,17 +63,21 @@ def get_version(versions_file):
 
     :rtype: str or None
     """
-    version = None
-    try:
-        versions = None
-        with open(versions_file, 'r') as f:
-            versions = json.load(f)
+    versions = _get_dict_from_json(versions_file)
+    return versions.get('version')
 
-        version = versions.get("version")
-    except Exception as e:
-        print "Problem getting version: {0!r}".format(e)
 
-    return version
+def get_tuf_repo(versions_file):
+    """
+    Return the "tuf_repo" data on the json file given as parameter.
+
+    :param versions_file: the file name of the json to parse.
+    :type versions_file: str
+
+    :rtype: str or None
+    """
+    versions = _get_dict_from_json(versions_file)
+    return versions.get('tuf_repo')
 
 
 def main():
@@ -132,7 +149,7 @@ def main():
             fd.run()
 
         cm = init(CopyMisc)
-        cm.run(binaries_path)
+        cm.run(binaries_path, get_tuf_repo(versions_path))
 
         pyc = init(PycRemover)
         pyc.run()

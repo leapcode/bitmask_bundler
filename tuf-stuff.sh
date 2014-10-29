@@ -35,7 +35,7 @@ cc_normal="${esc}[39m"
 
 show_help() {
 cat << EOF
-Usage: ${0##*/} [-h] [-r FILE] [-s] [-a (32|64)] -v VERSION -k KEY_FILE
+Usage: ${0##*/} [-h] [-r FILE] [-s] [-a (32|64)] -v VERSION -k KEY_FILE -R (S|U)
 Do stuff for version VERSION and arch ARCH.
 
     -h           display this help and exit.
@@ -44,6 +44,7 @@ Do stuff for version VERSION and arch ARCH.
     -r FILE      use particular repo/ file to do the tuf stuff. FILE must be a .tar.gz file.
     -s           run the setup process, create virtualenv and install dependencies.
     -v VERSION   version to work with. This is a mandatory argument.
+    -R REPO      use the (S)table or (U)nstable TUF web repo.
 EOF
 }
 
@@ -54,7 +55,7 @@ get_args() {
     ARCH="64"
     SETUP="NO"
 
-    while getopts "hr:sv:a:k:" opt; do
+    while getopts "hr:sv:a:k:R:" opt; do
         case "$opt" in
             h)
                 show_help
@@ -69,6 +70,8 @@ get_args() {
             k)  KEY_FILE=`realpath $OPTARG`
                 ;;
             a)  ARCH=$OPTARG
+                ;;
+            R)  WEB_REPO=$OPTARG
                 ;;
             '?')
                 show_help >&2
@@ -88,6 +91,17 @@ get_args() {
         show_help
         exit 1
     fi
+    if [[ -z $WEB_REPO ]]; then
+        echo 'Error: missing -R flag'
+        show_help
+        exit 1
+    else
+        if [[ $WEB_REPO != 'S' && $WEB_REPO != 'U' ]]; then
+            echo 'Error: invalid parameter for the -R flag'
+            show_help
+            exit 2
+        fi
+    fi
 
     echo "---------- settings ----------"
     echo "Arch: $ARCH"
@@ -95,6 +109,7 @@ get_args() {
     echo "Repo: $REPO"
     echo "Setup: $SETUP"
     echo "Version: $VERSION"
+    echo "Web repo: $WEB_REPO"
     echo "--------------------"
     read -p "Press <Enter> to continue, <Ctrl>+C to exit. "
 }
@@ -149,10 +164,16 @@ do_tuf_stuff() {
         TUF_ARCH='linux-i386'
     fi
 
+    if [[ $WEB_REPO == 'S' ]]; then
+        TUF_URL=https://dl.bitmask.net/tuf/$TUF_ARCH/metadata/
+    else
+        TUF_URL=https://dl.bitmask.net/tuf-unstable/$TUF_ARCH/metadata/
+    fi
+
     if [[ -z $REPO ]]; then
         # Download old repo metadata
         echo "${cc_yellow}-> Downloading metadata files from the old bundle...${cc_normal}"
-        wget --quiet --recursive --no-host-directories --cut-dirs=2 --no-parent --reject "index.html*" https://dl.bitmask.net/tuf/$TUF_ARCH/metadata/
+        wget --quiet --recursive --no-host-directories --cut-dirs=2 --no-parent --reject "index.html*" $TUF_URL
         mv metadata metadata.staged
     else
         echo "${cc_yellow}-> Extracting metadata files from the repo file...${cc_normal}"

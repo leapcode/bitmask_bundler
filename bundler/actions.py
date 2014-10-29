@@ -517,13 +517,15 @@ class CopyMisc(Action):
         updater_delay = 60
 
         [Mirror.localhost]
-        url_prefix = http://dl.bitmask.net/tuf""")
+        url_prefix = {0}""")
+    TUF_STABLE = "https://dl.bitmask.net/tuf"
+    TUF_UNSTABLE = "https://dl.bitmask.net/tuf-unstable"
 
     def __init__(self, basedir, skip, do):
         Action.__init__(self, "copymisc", basedir, skip, do)
 
     @skippable
-    def run(self, binary_path):
+    def run(self, binary_path, tuf_repo):
         self.log("downloading thunderbird extension...")
         ext_path = platform_dir(self._basedir, "apps",
                                 "bitmask-thunderbird-latest.xpi")
@@ -560,8 +562,14 @@ class CopyMisc(Action):
            _convert_path_for_win(os.path.join(self._basedir, "Bitmask")))
 
         launcher_path = os.path.join(self._basedir, "Bitmask", "launcher.conf")
+
+        if tuf_repo == 'stable':
+            tuf_config = self.TUF_CONFIG.format(self.TUF_STABLE)
+        elif tuf_repo == 'unstable':
+            tuf_config = self.TUF_CONFIG.format(self.TUF_UNSTABLE)
+
         with open(launcher_path, "w") as f:
-            f.write(self.TUF_CONFIG)
+            f.write(tuf_config)
 
         metadata = os.path.join(self._basedir, "Bitmask", "repo", "metadata")
         mkdir("-p", os.path.join(metadata, "current"))
