@@ -1,0 +1,10 @@
+{
+  "version": "nightly",
+  "bitmask_client": "develop",
+  "soledad": "develop",
+  "leap_pycommon": "develop",
+  "keymanager": "develop",
+  "leap_mail": "develop",
+  "bitmask_launcher": "develop",
+  "leap_assets": "master"
+}

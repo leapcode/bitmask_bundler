@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import json
 import os
 import stat
 import subprocess
@@ -65,14 +66,17 @@ class Action(object):
     def run(self, *args, **kwargs):
         pass
 
+    def log(self, msg):
+        print "{0}: {1}".format(self._name.upper(), msg)
+
 
 def skippable(func):
     def skip_func(self, *args, **kwargs):
         if self.skip:
-            print "Skipping...", self.name
+            print "SKIPPING: {0}...".format(self.name)
             return
         if not self.do:
-            print "Skipping...", self.name
+            print "SKIPPING: {0}...".format(self.name)
             return
         return func(self, *args, **kwargs)
     return skip_func
@@ -94,11 +98,8 @@ def push_pop(*directories):
     cd(os.path.join(*(("..",)*len(directories))))
 
 
-def get_version(repos, nightly):
-    if not nightly:
-        version = "unknown"
-        with push_pop("bitmask_client"):
-            version = git("describe", "--tags").strip()
+def get_version(repos, version):
+    if version is not None and version != 'nightly':
         return version
 
     m = hashlib.sha256()
@@ -125,31 +126,53 @@ class GitCloneAll(Action):
         return "git://github.com/leapcode/{0}".format(repo_name)
 
     @skippable
-    def run(self, sorted_repos, nightly):
-        print "Cloning repositories..."
+    def run(self, sorted_repos):
+        self.log("cloning repositories...")
         cd(self._basedir)
 
         for repo in sorted_repos:
-            print "Cloning", repo
+            self.log("cloning {0}".format(repo))
             rm("-rf", repo)
             git.clone(self._repo_url(repo), repo)
 
+        self.log("done cloning repos.")
+
+
+class GitCheckout(Action):
+    def __init__(self, basedir, skip, do):
+        Action.__init__(self, "gitcheckout", basedir, skip, do)
+
+    def _repo_url(self, repo_name):
+        if repo_name == "leap_assets":
+            return "git://leap.se/leap_assets"
+        return "git://github.com/leapcode/{0}".format(repo_name)
+
+    @skippable
+    def run(self, sorted_repos, versions_file):
+        self.log("`git checkout` repositories...")
+
+        versions = None
+        with open(versions_file, 'r') as f:
+            versions = json.load(f)
+
+        cd(self._basedir)
+
+        for repo in sorted_repos:
+            if repo not in versions:
+                self.log("skipping {0}, no version specified.".format(repo))
+                continue
+
+            where = versions[repo]  # where to checkout
+            self.log("Checkout {0} -> {1}".format(repo, where))
+
             with push_pop(repo):
-                if repo in ["leap_assets"]:
-                    # leap_assets only has 'master'
-                    continue
+                git.fetch()
+                git.checkout("--quiet", where)
 
-                if not nightly:
-                    git.checkout("master")
-                    git.pull("--ff-only", "origin", "master")
-                    git.fetch()
-                    git.reset("--hard", "origin/master")
-                    latest_tag = git.describe("--abbrev=0").strip()
-                    git.checkout("--quiet", latest_tag)
-                else:
-                    git.checkout("develop")
+                # just in case that we didn't just cloned but updated:
+                git.reset("--hard", where)
 
-        print "Done cloning repos..."
+        self.log("done checking out repos.")
 
 
 class PythonSetupAll(Action):
@@ -157,11 +180,11 @@ class PythonSetupAll(Action):
         Action.__init__(self, "pythonsetup", basedir, skip, do)
 
     def _build_client(self, repo, binaries_path):
-        print "Running make on the client..."
+        self.log("running make on the client...")
         make()
-        print "Running build to get correct version..."
+        self.log("running build to get correct version...")
         python("setup.py", "build")
-        print "Updating hashes"
+        self.log("updating hashes")
         os.environ["OPENVPN_BIN"] = os.path.join(
             binaries_path, "openvpn.files", "leap-openvpn")
         os.environ["BITMASK_ROOT"] = os.path.join(
@@ -174,10 +197,10 @@ class PythonSetupAll(Action):
         for repo in sorted_repos:
 
             if repo in ["bitmask_launcher", "leap_assets"]:
-                print "Skipping repo: {0}...".format(repo)
+                self.log("skipping repo: {0}...".format(repo))
                 continue
 
-            print "Setting up", repo
+            self.log("setting up {0}".format(repo))
 
             if repo == "soledad":
                 for subrepo in ["common", "client"]:
@@ -210,7 +233,7 @@ class CreateDirStructure(Action):
 
     @skippable
     def run(self):
-        print "Creating directory structure..."
+        self.log("creating directory structure...")
         if IS_MAC:
             self._darwin_create_dir_structure()
             self._create_dir_structure(os.path.join(self._basedir,
@@ -218,7 +241,7 @@ class CreateDirStructure(Action):
                                                     "Contents", "MacOS"))
         else:
             self._create_dir_structure(self._basedir)
-        print "Done"
+        self.log("done.")
 
     def _create_dir_structure(self, basedir):
         mkdirp = mkdir.bake("-p")
@@ -247,7 +270,7 @@ class CollectAllDeps(Action):
         Action.__init__(self, "collectdeps", basedir, skip, do)
 
     def _remove_unneeded(self, lib_dir):
-        print "Removing unneeded files..."
+        self.log("removing unneeded files...")
         files = find(lib_dir).strip().splitlines()
         keep = ["QtCore.so",
                 "QtGui.so",
@@ -269,11 +292,11 @@ class CollectAllDeps(Action):
                 if os.path.split(f)[1] not in keep:
                     rm("-rf", f)
                     pass
-        print "Done"
+        self.log("done.")
 
     @skippable
     def run(self, path_file):
-        print "Collecting dependencies..."
+        self.log("collecting dependencies...")
         app_py = os.path.join(self._basedir,
                               "bitmask_client",
                               "src",
@@ -284,7 +307,7 @@ class CollectAllDeps(Action):
         collect_deps(app_py, dest_lib_dir, path_file)
 
         self._remove_unneeded(dest_lib_dir)
-        print "Done"
+        self.log("done.")
 
 
 class CopyBinaries(Action):
@@ -293,7 +316,7 @@ class CopyBinaries(Action):
 
     @skippable
     def run(self, binaries_path):
-        print "Copying binaries..."
+        self.log("copying binaries...")
         dest_lib_dir = platform_dir(self._basedir, "lib")
 
         if IS_MAC:
@@ -364,7 +387,7 @@ class CopyBinaries(Action):
         mail_dir = platform_dir(self._basedir, "apps", "mail")
         cp(_convert_path_for_win(os.path.join(binaries_path, "gpg")),
            _convert_path_for_win(mail_dir))
-        print "Done"
+        self.log("done.")
 
 
 class PLister(Action):
@@ -404,14 +427,14 @@ class PLister(Action):
 
     @skippable
     def run(self):
-        print "Generating Info.plist file..."
+        self.log("generating Info.plist file...")
         file_util.write_file(os.path.join(self._basedir,
                                           "Bitmask",
                                           "Bitmask.app",
                                           "Contents",
                                           "Info.plist"),
                              self.plist)
-        print "Generating qt.conf file..."
+        self.log("generating qt.conf file...")
         file_util.write_file(os.path.join(self._basedir,
                                           "Bitmask",
                                           "Bitmask.app",
@@ -419,7 +442,7 @@ class PLister(Action):
                                           "Resources",
                                           "qt.conf"),
                              self.qtconf)
-        print "Done"
+        self.log("done.")
 
 
 class SeededConfig(Action):
@@ -428,10 +451,10 @@ class SeededConfig(Action):
 
     @skippable
     def run(self, seeded_config):
-        print "Copying seeded config..."
+        self.log("copying seeded config...")
         dir_util.copy_tree(seeded_config,
                            platform_dir(self._basedir, "config"))
-        print "Done"
+        self.log("done.")
 
 
 class DarwinLauncher(Action):
@@ -455,7 +478,7 @@ class DarwinLauncher(Action):
 
     @skippable
     def run(self):
-        print "Generating launcher script for OSX..."
+        self.log("generating launcher script for OSX...")
         launcher_path = os.path.join(self._basedir,
                                      "Bitmask",
                                      "Bitmask.app",
@@ -466,7 +489,7 @@ class DarwinLauncher(Action):
         os.chmod(launcher_path, stat.S_IRGRP | stat.S_IROTH | stat.S_IRUSR
                  | stat.S_IWGRP | stat.S_IWOTH | stat.S_IWUSR
                  | stat.S_IXGRP | stat.S_IXOTH | stat.S_IXUSR)
-        print "Done"
+        self.log("done.")
 
 
 class CopyAssets(Action):
@@ -475,7 +498,7 @@ class CopyAssets(Action):
 
     @skippable
     def run(self):
-        print "Copying assets..."
+        self.log("copying assets...")
         resources_dir = os.path.join(self._basedir,
                                      "Bitmask",
                                      "Bitmask.app",
@@ -485,7 +508,7 @@ class CopyAssets(Action):
            resources_dir)
         cp(os.path.join(self._basedir, "leap_assets", "mac", "bitmask.tiff"),
            resources_dir)
-        print "Done"
+        self.log("done.")
 
 
 class CopyMisc(Action):
@@ -494,22 +517,24 @@ class CopyMisc(Action):
         updater_delay = 60
 
         [Mirror.localhost]
-        url_prefix = http://dl.bitmask.net/tuf""")
+        url_prefix = {0}""")
+    TUF_STABLE = "https://dl.bitmask.net/tuf"
+    TUF_UNSTABLE = "https://dl.bitmask.net/tuf-unstable"
 
     def __init__(self, basedir, skip, do):
         Action.__init__(self, "copymisc", basedir, skip, do)
 
     @skippable
-    def run(self, binary_path):
-        print "Downloading thunderbird extension..."
+    def run(self, binary_path, tuf_repo):
+        self.log("downloading thunderbird extension...")
         ext_path = platform_dir(self._basedir, "apps",
                                 "bitmask-thunderbird-latest.xpi")
         urllib.urlretrieve(
             "https://downloads.leap.se/thunderbird_extension/"
             "bitmask-thunderbird-latest.xpi",
             ext_path)
-        print "Done"
-        print "Copying misc files..."
+        self.log("done")
+        self.log("copying misc files...")
         apps_dir = _convert_path_for_win(platform_dir(self._basedir, "apps"))
         cp(_convert_path_for_win(
             os.path.join(self._basedir, "bitmask_launcher", "src",
@@ -537,15 +562,21 @@ class CopyMisc(Action):
            _convert_path_for_win(os.path.join(self._basedir, "Bitmask")))
 
         launcher_path = os.path.join(self._basedir, "Bitmask", "launcher.conf")
+
+        if tuf_repo == 'stable':
+            tuf_config = self.TUF_CONFIG.format(self.TUF_STABLE)
+        elif tuf_repo == 'unstable':
+            tuf_config = self.TUF_CONFIG.format(self.TUF_UNSTABLE)
+
         with open(launcher_path, "w") as f:
-            f.write(self.TUF_CONFIG)
+            f.write(tuf_config)
 
         metadata = os.path.join(self._basedir, "Bitmask", "repo", "metadata")
         mkdir("-p", os.path.join(metadata, "current"))
         mkdir("-p", os.path.join(metadata, "previous"))
         cp(os.path.join(binary_path, "root.json"),
            os.path.join(metadata, "current"))
-        print "Done"
+        self.log("done")
 
 
 class FixDylibs(Action):
@@ -563,7 +594,7 @@ class DmgIt(Action):
 
     @skippable
     def run(self, repos, nightly):
-        print "Dmg'ing it..."
+        self.log("Dmg'ing it...")
         cd(self._basedir)
         version = get_version(repos, nightly)
         dmg_dir = os.path.join(self._basedir, "dmg")
@@ -598,7 +629,7 @@ class DmgIt(Action):
                 "-imagekey", "zlib-level=9", "-o",
                 dmg_path)
         rm("-f", raw_dmg_path)
-        print "Done"
+        self.log("Done")
 
 
 class TarballIt(Action):
@@ -607,7 +638,7 @@ class TarballIt(Action):
 
     @skippable
     def run(self, repos, nightly):
-        print "Tarballing it..."
+        self.log("Tarballing it...")
         cd(self._basedir)
         version = get_version(repos, nightly)
         import platform
@@ -615,7 +646,7 @@ class TarballIt(Action):
         bundle_name = "Bitmask-linux%s-%s" % (bits, version)
         mv("Bitmask", bundle_name)
         tar("cjf", bundle_name+".tar.bz2", bundle_name)
-        print "Done"
+        self.log("Done")
 
 
 class PycRemover(Action):
@@ -624,18 +655,18 @@ class PycRemover(Action):
 
     @skippable
     def run(self):
-        print "Removing .pyc files..."
+        self.log("Removing .pyc files...")
         files = find(self._basedir, "-name", "*.pyc").strip().splitlines()
         for f in files:
             rm(f)
         files = find(self._basedir, "-name", "*\\.so*").strip().splitlines()
         for f in files:
-            print "Stripping", f
+            self.log("Stripping {0}".format(f))
             try:
                 strip(f)
             except:
                 pass
-        print "Done"
+        self.log("Done")
 
 
 class MtEmAll(Action):
@@ -644,7 +675,7 @@ class MtEmAll(Action):
 
     @skippable
     def run(self):
-        print "Mt'ing all the files..."
+        self.log("Mt'ing all the files...")
         cd(os.path.join(self._basedir, "Bitmask"))
         subprocess.check_call(
             ["C:\\Program Files\\Windows Kits\\8.0\\bin\\x86\\mt.exe",
@@ -655,7 +686,7 @@ class MtEmAll(Action):
             ["C:\\Program Files\\Windows Kits\\8.0\\bin\\x86\\mt.exe",
              "-nologo", "-manifest", "openvpn_leap.exe.manifest",
              "-outputresource:openvpn_leap.exe;#1"])
-        print "Done"
+        self.log("Done")
 
 
 class ZipIt(Action):
@@ -669,7 +700,7 @@ class ZipIt(Action):
 
     @skippable
     def run(self, repos, nightly):
-        print "Ziping it..."
+        self.log("Ziping it...")
         cd(self._basedir)
         version = get_version(repos, nightly)
         name = "Bitmask-win32-{0}".format(version)
@@ -678,7 +709,7 @@ class ZipIt(Action):
         zf = zipfile.ZipFile("{0}.zip".format(name), "w", zipfile.ZIP_DEFLATED)
         self._zipdir(name, zf)
         zf.close()
-        print "Done"
+        self.log("Done")
 
 
 class SignIt(Action):
@@ -687,7 +718,7 @@ class SignIt(Action):
 
     @skippable
     def run(self, identity):
-        print "Signing tuntap kext..."
+        self.log("Signing tuntap kext...")
         kext = os.path.join(self._basedir,
                             "Bitmask",
                             "Bitmask.app",
@@ -698,8 +729,8 @@ class SignIt(Action):
                             "Extensions",
                             "tun.kext")
         codesign("-s", identity, "--deep", kext)
-        print "Done"
-        print "Signing tuntap installer..."
+        self.log("Done")
+        self.log("Signing tuntap installer...")
         tuntap_app = os.path.join(self._basedir,
                                   "Bitmask",
                                   "Bitmask.app",
@@ -707,14 +738,14 @@ class SignIt(Action):
                                   "Resources",
                                   "tuntap-installer.app")
         codesign("-s", identity, "--deep", tuntap_app)
-        print "Done"
-        print "Signing main structure, this will take a while..."
+        self.log("Done")
+        self.log("Signing main structure, this will take a while...")
         main_app = os.path.join(self._basedir,
                                 "Bitmask",
                                 "Bitmask.app")
-        print codesign("-s", identity, "--force",
-                       "--deep", "--verbose", main_app)
-        print "Done"
+        self.log(codesign("-s", identity, "--force",
+                          "--deep", "--verbose", main_app))
+        self.log("Done")
 
 
 class RemoveUnused(Action):
@@ -723,7 +754,7 @@ class RemoveUnused(Action):
 
     @skippable
     def run(self):
-        print "Removing unused python code..."
+        self.log("Removing unused python code...")
         test_dirs = find(self._basedir, "-name", "*test*").strip().splitlines()
         for td in test_dirs:
             rm("-rf", os.path.join(self._basedir, td))
@@ -731,4 +762,4 @@ class RemoveUnused(Action):
         # twisted_used = ["aplication", "conch", "cred",
         #                 "version", "internet", "mail"]
         # twisted_files = find(self._basedir, "-name", "t
-        print "Done"
+        self.log("Done")

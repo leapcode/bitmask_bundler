@@ -40,6 +40,11 @@
 set -e  # Exit immediately if a command exits with a non-zero status.
 
 BASE='/home/leap/bitmask.bundle'
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}"  )" && pwd  )"
+VERSIONS_FILE="$SCRIPT_DIR/bitmask.json"
+BINARY_COPIER="$SCRIPT_DIR/copy-binaries.sh"
+
 mkdir -p $BASE
 
 # Note: we could use:
@@ -52,6 +57,7 @@ else
 fi
 
 install_dependencies() {
+    sudo apt-get update  # update apt, otherwise some packages may not be found
     sudo apt-get install -y build-essential python-dev cmake git autoconf \
         libtool liblzo2-dev libqt4-dev libxml2-dev libxslt1-dev qtmobility-dev \
         libsqlite3-dev libffi-dev python-virtualenv
@@ -120,7 +126,7 @@ set_pyside_environment() {
 
 copy_binaries() {
     cd $BASE
-    ../copy-binaries.sh
+    $BINARY_COPIER
 }
 
 create_bundler_paths() {
@@ -145,9 +151,9 @@ setup_bundler() {
     git clone https://github.com/leapcode/bitmask_bundler.git bitmask_bundler.git
     virtualenv bundler.venv && source bundler.venv/bin/activate
 
-    # install dependencies by hand...
-    pip install psutil
-    pip install tuf  # used in the launher, it is not in any requirements.txt
+    # HACK: install these dependencies manually since they can't be installed normally due not passing some pip checks.
+    pip install --upgrade pip
+    pip install --allow-external u1db --allow-unverified u1db --allow-external dirspec --allow-unverified dirspec u1db dirspec
 
     git clone https://github.com/chiiph/protobuf-socket-rpc protobuf-socket-rpc.git
     cd protobuf-socket-rpc.git
@@ -156,28 +162,58 @@ setup_bundler() {
     pip install -r $BASE/bitmask_bundler.git/pkg/requirements.pip
 }
 
+clean() {
+    cd $BASE
+    rm -fr bitmask_bundler.git bundler.venv protobuf-socket-rpc.git bundler.output
+}
+
 run_bundler() {
     cd $BASE
 
     # if the virtualenv is not sourced, then source it!
-    # this is helpful if you want to run this step only
+    # this is helpful if you want to run only this step
     [[ -z "$VIRTUAL_ENV"  ]] && source bundler.venv/bin/activate
 
     set_pyside_environment
 
     mkdir bundler.output
-    python bitmask_bundler.git/bundler/main.py --workon bundler.output --binaries binaries/ --paths-file bundler.paths --do gitclone pythonsetup $VERSION
-    python bitmask_bundler.git/bundler/main.py --workon bundler.output --binaries binaries/ --paths-file bundler.paths --skip gitclone pythonsetup $VERSION
+
+    # Use a shortcut for the bundler command
+    bundler="python bitmask_bundler.git/bundler/main.py --workon bundler.output --binaries binaries/ --paths-file bundler.paths --versions-file $VERSIONS_FILE"
+
+    $bundler --do gitclone
+    $bundler --do gitcheckout
+
+    $bundler --do pythonsetup
+    $bundler --skip gitclone gitcheckout pythonsetup
 }
 
-[[ "$1" == 'nightly' ]] && VERSION='--nightly'
+REUSE_BINARIES=$BASE/reuse-binaries.lock
 
-install_dependencies
-build_boost
-build_launcher
-build_openvpn
-build_pyside
-copy_binaries
-create_bundler_paths
+if [[ ! -f $BINARY_COPIER ]]; then
+    echo "ERROR: missing $BINARY_COPIER file."
+    exit 1
+fi
+
+if [[ ! -f $VERSIONS_FILE ]]; then
+    echo "ERROR: missing $VERSIONS_FILE file."
+    exit 1
+fi
+
+if [[ ! -f $REUSE_BINARIES ]]; then
+    install_dependencies
+    build_boost
+    build_launcher
+    build_openvpn
+    build_pyside
+    copy_binaries
+    create_bundler_paths
+else
+    echo "Reusing existing binaries, cleaning up before creating a new bundle..."
+    clean
+fi
+
 setup_bundler
 run_bundler
+
+echo 'If you remove this file the createbundle.sh script will rebuild all the binaries.' > $REUSE_BINARIES
