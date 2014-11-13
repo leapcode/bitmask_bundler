@@ -46,6 +46,12 @@ VERSIONS_FILE="$SCRIPT_DIR/bitmask.json"
 BINARY_COPIER="$SCRIPT_DIR/copy-binaries.sh"
 ROOT_JSON="$SCRIPT_DIR/root.json"
 
+# picked from https://github.com/OpenVPN/openvpn/releases
+OPENVPN_VERSION="v2.3.6"
+
+BOOST_MINOR="57"  # Minor version
+BOOST_NAME="boost_1_${BOOST_MINOR}_0"
+
 mkdir -p $BASE
 
 # Note: we could use:
@@ -67,9 +73,12 @@ install_dependencies() {
 build_boost() {
     cd $BASE
 
-    BOOST_NAME='boost_1_56_0'
-    wget -c http://ufpr.dl.sourceforge.net/project/boost/boost/1.56.0/$BOOST_NAME.tar.bz2
-    tar xjf $BOOST_NAME.tar.bz2
+    wget -c http://ufpr.dl.sourceforge.net/project/boost/boost/1.${BOOST_MINOR}.0/${BOOST_NAME}.tar.bz2
+    tar xjf ${BOOST_NAME}.tar.bz2
+
+    # NOTE: this md5 is the only thing that they provide to verification.
+    # for more information see: https://leap.se/code/issues/6296
+    echo "1be49befbdd9a5ce9def2983ba3e7b76  boost_1_57_0.tar.bz2" | md5sum -c -
 
     cd $BOOST_NAME/tools/build/
     ./bootstrap.sh --with-toolset=gcc
@@ -95,7 +104,7 @@ build_launcher() {
 build_openvpn() {
     # Build openvpn to support RPATH
     cd $BASE
-    git clone https://github.com/OpenVPN/openvpn.git
+    git clone https://github.com/OpenVPN/openvpn.git --branch $OPENVPN_VERSION
     cd openvpn
     autoreconf -i
     LZO_LIBS="/usr/lib/$ARCH/liblzo2.a" ./configure LDFLAGS="-Wl,-rpath,lib/" --disable-snappy --disable-plugin-auth-pam
