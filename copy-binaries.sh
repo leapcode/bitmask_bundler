@@ -38,14 +38,14 @@ cp /usr/lib/$ARCH/libssl.so.1.0.0 .
 cp /usr/lib/$ARCH/libstdc++.so.6 .
 
 # NOTE: this needs to be always the same root.json file
-cp $BASE/root.json
+cp $BASE/root.json .
 
 mkdir openvpn.files
 cd openvpn.files
 cp $BASE/openvpn/src/openvpn/openvpn leap-openvpn
 
-cp $BASE/bundler.output/bitmask_client/pkg/linux/bitmask-root
-cp $BASE/bundler.output/bitmask_client/pkg/linux/leap-install-helper.sh
-cp $BASE/bundler.output/bitmask_client/pkg/linux/polkit/se.leap.bitmask.bundle.policy
+cp $BASE/bundler.output/bitmask_client/pkg/linux/bitmask-root .
+cp $BASE/bundler.output/bitmask_client/pkg/linux/leap-install-helper.sh .
+cp $BASE/bundler.output/bitmask_client/pkg/linux/polkit/se.leap.bitmask.bundle.policy .
 chmod +x bitmask-root
 chmod +x leap-install-helper.sh
