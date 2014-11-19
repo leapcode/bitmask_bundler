@@ -37,16 +37,15 @@ cp /usr/lib/libpython2.7.so.1.0 .
 cp /usr/lib/$ARCH/libssl.so.1.0.0 .
 cp /usr/lib/$ARCH/libstdc++.so.6 .
 
-touch root.json  # empty file for TUF
+# NOTE: this needs to be always the same root.json file
+cp $BASE/root.json
 
 mkdir openvpn.files
 cd openvpn.files
 cp $BASE/openvpn/src/openvpn/openvpn leap-openvpn
 
-# TODO: to avoid network requests this should be copied from the cloned repositories
-# after `bundler gitclone` and before `bundler pythonsetup`
-wget https://raw.githubusercontent.com/leapcode/bitmask_client/develop/pkg/linux/bitmask-root
-wget https://raw.githubusercontent.com/leapcode/bitmask_client/develop/pkg/linux/leap-install-helper.sh
-wget https://raw.githubusercontent.com/leapcode/bitmask_client/develop/pkg/linux/polkit/se.leap.bitmask.bundle.policy
+cp $BASE/bundler.output/bitmask_client/pkg/linux/bitmask-root
+cp $BASE/bundler.output/bitmask_client/pkg/linux/leap-install-helper.sh
+cp $BASE/bundler.output/bitmask_client/pkg/linux/polkit/se.leap.bitmask.bundle.policy
 chmod +x bitmask-root
 chmod +x leap-install-helper.sh

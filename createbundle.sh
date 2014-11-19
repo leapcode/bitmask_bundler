@@ -44,6 +44,7 @@ BASE='/home/leap/bitmask.bundle'
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}"  )" && pwd  )"
 VERSIONS_FILE="$SCRIPT_DIR/bitmask.json"
 BINARY_COPIER="$SCRIPT_DIR/copy-binaries.sh"
+ROOT_JSON="$SCRIPT_DIR/root.json"
 
 mkdir -p $BASE
 
@@ -125,6 +126,7 @@ set_pyside_environment() {
 }
 
 copy_binaries() {
+    cp $ROOT_JSON $BASE
     cd $BASE
     $BINARY_COPIER
 }
@@ -155,6 +157,11 @@ setup_bundler() {
     pip install --upgrade pip
     pip install --allow-external u1db --allow-unverified u1db --allow-external dirspec --allow-unverified dirspec u1db dirspec
 
+    # HACK: this is needed so tuf can verify the downloaded data, if we add
+    # this to the requirements.pip pycrypto is installed as an egg and the
+    # bundler can't copy its contents (not supported right now)
+    pip install tuf[tools] pycrypto
+
     git clone https://github.com/chiiph/protobuf-socket-rpc protobuf-socket-rpc.git
     cd protobuf-socket-rpc.git
     python setup.py easy_install -Z .
@@ -183,6 +190,7 @@ run_bundler() {
 
     $bundler --do gitclone
     $bundler --do gitcheckout
+    copy_binaries
 
     $bundler --do pythonsetup
     $bundler --skip gitclone gitcheckout pythonsetup
@@ -200,13 +208,17 @@ if [[ ! -f $VERSIONS_FILE ]]; then
     exit 1
 fi
 
+if [[ ! -f $ROOT_JSON ]]; then
+    echo "ERROR: missing $ROOT_JSON file."
+    exit 1
+fi
+
 if [[ ! -f $REUSE_BINARIES ]]; then
     install_dependencies
     build_boost
     build_launcher
     build_openvpn
     build_pyside
-    copy_binaries
     create_bundler_paths
 else
     echo "Reusing existing binaries, cleaning up before creating a new bundle..."
