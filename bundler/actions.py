@@ -375,6 +375,7 @@ class CopyBinaries(Action):
                    os.path.join(root, "apps", "eip")))
         else:
             cp(glob(os.path.join(binaries_path, "*.so*")), dest_lib_dir)
+            cp(glob(os.path.join(binaries_path, "libQt*.non-ubuntu")), dest_lib_dir)
 
             eip_dir = platform_dir(self._basedir, "apps", "eip")
             # cp(os.path.join(binaries_path, "openvpn"), eip_dir)
