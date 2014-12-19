@@ -36,6 +36,7 @@ def collect_deps(root, dest_lib_dir, path_file):
     mg.import_hook("zope.proxy")
     mg.import_hook("tuf")
     mg.import_hook("timeit")
+    mg.import_hook("daemon")  # for leap/bitmask/util/polkit_agent.py
     mg.run_script(root)
 
     packages = [mg.findNode(i) for i in ["leap.common", "leap.keymanager", "leap.mail", "leap.soledad.client", "leap.soledad.common", "jsonschema"]]
