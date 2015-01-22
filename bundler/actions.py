@@ -568,15 +568,21 @@ class CopyMisc(Action):
             tuf_config = self.TUF_CONFIG.format(self.TUF_STABLE)
         elif tuf_repo == 'unstable':
             tuf_config = self.TUF_CONFIG.format(self.TUF_UNSTABLE)
+        else:
+            # a different value than stable/unstable is interpreted as
+            # "don't use tuf", so we don't use a launcher file
+            tuf_config = None
 
-        with open(launcher_path, "w") as f:
-            f.write(tuf_config)
+        if tuf_config is not None:
+            with open(launcher_path, "w") as f:
+                f.write(tuf_config)
 
         metadata = os.path.join(self._basedir, "Bitmask", "repo", "metadata")
         mkdir("-p", os.path.join(metadata, "current"))
         mkdir("-p", os.path.join(metadata, "previous"))
         cp(os.path.join(binary_path, "root.json"),
            os.path.join(metadata, "current"))
+
         self.log("done")
 
 
