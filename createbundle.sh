@@ -202,6 +202,10 @@ run_bundler() {
     copy_binaries
 
     $bundler --do pythonsetup
+
+    # hack to solve gnupg version problem
+    pip uninstall -y gnupg && pip install gnupg
+
     $bundler --skip gitclone gitcheckout pythonsetup
 }
 

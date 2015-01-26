@@ -23,7 +23,6 @@ if IS_WIN:
     from pbs import cd, glob
     git = pbs.Command("C:\\Program Files\\Git\\bin\\git.exe")
     python = pbs.Command("C:\\Python27\\python.exe")
-    pip = pbs.Command("C:\\Python27\\scripts\\pip.exe")
     mkdir = pbs.Command("C:\\Program Files\\Git\\bin\\mkdir.exe")
     make = pbs.Command("C:\\MinGW\\bin\\mingw32-make.exe")
     cp = pbs.Command("C:\\Program Files\\Git\\bin\\cp.exe")
@@ -33,7 +32,7 @@ if IS_WIN:
     tar = pbs.Command("C:\\Program Files\\Git\\bin\\tar.exe")
     mv = pbs.Command("C:\\Program Files\\Git\\bin\\mv.exe")
 else:
-    from sh import git, cd, python, mkdir, make, cp, glob, pip, rm
+    from sh import git, cd, python, mkdir, make, cp, glob, rm
     from sh import find, ln, tar, mv, strip
 
 from depcollector import collect_deps
@@ -205,14 +204,11 @@ class PythonSetupAll(Action):
             if repo == "soledad":
                 for subrepo in ["common", "client"]:
                     with push_pop(repo, subrepo):
-                        pip("install", "-r", "pkg/requirements.pip")
                         python("setup.py", "develop")
                         sys.path.append(os.path.join(self._basedir,
                                                      repo, subrepo, "src"))
             else:
                 with push_pop(repo):
-                    pip("install", "-r", "pkg/requirements.pip")
-
                     if repo == "bitmask_client":
                         self._build_client(repo, binaries_path)
 
