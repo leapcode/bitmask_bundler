@@ -204,7 +204,7 @@ class PythonSetupAll(Action):
             if repo == "soledad":
                 for subrepo in ["common", "client"]:
                     with push_pop(repo, subrepo):
-                        python("setup.py", "develop")
+                        python("setup.py", "develop", "--always-unzip")
                         sys.path.append(os.path.join(self._basedir,
                                                      repo, subrepo, "src"))
             else:
@@ -212,7 +212,7 @@ class PythonSetupAll(Action):
                     if repo == "bitmask_client":
                         self._build_client(repo, binaries_path)
 
-                    python("setup.py", "develop")
+                    python("setup.py", "develop", "--always-unzip")
                     sys.path.append(os.path.join(self._basedir, repo, "src"))
 
 
