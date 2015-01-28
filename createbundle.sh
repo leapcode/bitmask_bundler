@@ -201,6 +201,8 @@ run_bundler() {
     $bundler --do gitcheckout
     copy_binaries
 
+    # uncomment the following line if you want to do a pause before the python setup in order to do some tweaks on the cloned repos.
+    # read -p "Waiting to 'pythonsetup' ... press <Enter> to continue, <Ctrl>+C to exit. "
     $bundler --do pythonsetup
 
     # hack to solve gnupg version problem
