@@ -165,6 +165,7 @@ setup_bundler() {
     # HACK: install these dependencies manually since they can't be installed normally due not passing some pip checks.
     pip install --upgrade pip
     pip install --allow-external u1db --allow-unverified u1db --allow-external dirspec --allow-unverified dirspec u1db dirspec
+    pip install pysqlcipher
 
     # HACK: this is needed so tuf can verify the downloaded data, if we add
     # this to the requirements.pip pycrypto is installed as an egg and the
