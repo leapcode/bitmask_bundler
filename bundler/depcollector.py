@@ -41,6 +41,11 @@ def collect_deps(root, dest_lib_dir, path_file):
     mg.import_hook("tuf")
     mg.import_hook("timeit")
     mg.import_hook("daemon")  # for leap/bitmask/util/polkit_agent.py
+
+    # this import ensures the inclusion of the 'service-identity' dependency
+    # since we don't import it implicitly anywhere
+    mg.import_hook("service_identity")
+
     mg.run_script(root)
 
     packages = [mg.findNode(i) for i in ["leap.common", "leap.keymanager",
