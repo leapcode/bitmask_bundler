@@ -7,8 +7,8 @@
 #   tuf-stuff.sh                   # this script
 
 # Output:
-#   workdir/ <-- temporary folder: virtualenv, bundle, repo.tar.gz, key
-#   output/  <-- here you'll find the resulting compressed repo/bundle
+#   workdir/     <-- temporary folder: virtualenv, bundle, repo.tar.gz, key
+#   └── output/  <-- here you'll find the resulting compressed repo/bundle
 
 
 # Expected directory structure for the repo after the script finishes:
@@ -35,14 +35,13 @@ cc_normal="${esc}[39m"
 
 show_help() {
 cat << EOF
-Usage: ${0##*/} [-h] [-r FILE] [-s] [-a (32|64)] -v VERSION -k KEY_FILE -R (S|U)
+Usage: ${0##*/} [-h] [-r FILE] [-a (32|64)] -v VERSION -k KEY_FILE -R (S|U)
 Do stuff for version VERSION and arch ARCH.
 
     -h           display this help and exit.
     -a ARCH      do the tuf stuff for that ARCH, 32 or 64 bits. The default is '64'.
     -k KEY_FILE  use this key file to sign the release
     -r FILE      use particular repo/ file to do the tuf stuff. FILE must be a .tar.gz file.
-    -s           run the setup process, create virtualenv and install dependencies.
     -v VERSION   version to work with. This is a mandatory argument.
     -R REPO      use the (S)table or (U)nstable TUF web repo.
 EOF
@@ -53,9 +52,8 @@ get_args() {
     local OPTIND
 
     ARCH="64"
-    SETUP="NO"
 
-    while getopts "hr:sv:a:k:R:" opt; do
+    while getopts "hr:v:a:k:R:" opt; do
         case "$opt" in
             h)
                 show_help
@@ -64,8 +62,6 @@ get_args() {
             v)  VERSION=$OPTARG
                 ;;
             r)  REPO=`realpath $OPTARG`
-                ;;
-            s)  SETUP='YES'
                 ;;
             k)  KEY_FILE=`realpath $OPTARG`
                 ;;
@@ -107,7 +103,6 @@ get_args() {
     echo "Arch: $ARCH"
     echo "Key: $KEY_FILE"
     echo "Repo: $REPO"
-    echo "Setup: $SETUP"
     echo "Version: $VERSION"
     echo "Web repo: $WEB_REPO"
     echo "--------------------"
@@ -121,10 +116,9 @@ do_init(){
 
     BASE=`pwd`
     WORKDIR=$BASE/workdir
-    VENVDIR=$WORKDIR/tuf.venv
 
     BITMASK="Bitmask-linux$ARCH-$VERSION"
-    RELEASE=$BASE/release.py
+    RELEASE=/release.py
 
     if [[ ! -f $RELEASE ]]; then
         echo "ERROR: you need to copy the release.py file into this directory."
@@ -136,19 +130,6 @@ do_init(){
 
     # Initialize path
     mkdir -p $WORKDIR
-}
-
-do_setup() {
-    # Create a clean virtualenv and install the needed dependencies.
-    echo "${cc_yellow}-> Setting up virtualenv and installing dependencies...${cc_normal}"
-    cd $WORKDIR
-
-    # remove existing virtualenv
-    [[ -d $VENVDIR ]] && rm -fr $VENVDIR
-
-    virtualenv $VENVDIR
-    source $VENVDIR/bin/activate
-    pip install tuf[tools] pycrypto
 }
 
 do_tuf_stuff() {
@@ -197,23 +178,13 @@ do_tuf_stuff() {
     tar cjf output/$BITMASK-tuf.tar.bz2 repo/
 }
 
-
 get_args $@
 
 do_init
-
-if [[ $SETUP == 'YES' ]]; then
-    do_setup
-else
-    if [[ ! -f $VENVDIR/bin/activate ]]; then
-        echo "${cc_red}Error:${cc_normal} missing virtualenv, you need to use the -s switch."
-        exit 1
-    fi
-    source $VENVDIR/bin/activate
-fi
 
 do_tuf_stuff
 
 echo "${cc_green}TUF release complete.${cc_normal}"
 echo "You can find the resulting file in:"
 echo "$WORKDIR/output/$BITMASK-tuf.tar.bz2"
+sha256sum $WORKDIR/output/$BITMASK-tuf.tar.bz2
