@@ -166,6 +166,7 @@ setup_bundler() {
     pip install --upgrade pip
     pip install --allow-external u1db --allow-unverified u1db --allow-external dirspec --allow-unverified dirspec u1db dirspec
     pip install pysqlcipher
+    pip install functools32  # HACK: this dependency is needed by jsonschema and is not automatically gathered
 
     # HACK: this is needed so tuf can verify the downloaded data, if we add
     # this to the requirements.pip pycrypto is installed as an egg and the
