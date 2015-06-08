@@ -6,7 +6,7 @@
   "keymanager": "develop",
   "leap_mail": "release/bitmask-0.9.x-alpha",
   "leap_pycommon": "release/bitmask-0.9.x-alpha",
-  "bitmask_launcher": "0.3.4",
+  "bitmask_launcher": "0.3.5",
   "leap_assets": "master"
 }
 
