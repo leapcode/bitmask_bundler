@@ -46,6 +46,8 @@ def collect_deps(root, dest_lib_dir, path_file):
     # this import ensures the inclusion of the 'service-identity' dependency
     # since we don't import it implicitly anywhere
     mg.import_hook("service_identity")
+    # this wasn't included in the bundle, there's no explicit import for it
+    mg.import_hook("pyasn1_modules")
 
     mg.run_script(root)
 
