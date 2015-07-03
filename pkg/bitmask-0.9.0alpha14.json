@@ -1,0 +1,11 @@
+{
+  "version": "0.9.0alpha14",
+  "tuf_repo": "",
+  "bitmask_client": "develop",
+  "soledad": "develop",
+  "keymanager": "develop",
+  "leap_mail": "release/bitmask-0.9.x-alpha",
+  "leap_pycommon": "develop",
+  "bitmask_launcher": "0.3.5",
+  "leap_assets": "master"
+}
