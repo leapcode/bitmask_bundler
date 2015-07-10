@@ -1,0 +1,11 @@
+{
+  "version": "0.9.0rc1",
+  "tuf_repo": "unstable",
+  "bitmask_client": "0.9.0rc1",
+  "soledad": "0.7.1",
+  "keymanager": "0.4.1",
+  "leap_mail": "0.4.0rc1",
+  "leap_pycommon": "0.4.1",
+  "bitmask_launcher": "0.3.5",
+  "leap_assets": "master"
+}
