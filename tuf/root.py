@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Tool to initialize a TUF repo.
+Tool to initialize or update the root.json of a TUF repo.
 
 The keys can be generated with:
     openssl genrsa -des3 -out private.pem 4096
@@ -24,11 +24,20 @@ The public key can be exported with:
     openssl rsa -in private.pem -outform PEM -pubout -out public.pem
 """
 
+import datetime
 import sys
 
-from tuf.repository_tool import create_new_repository
+from os import listdir
+from os.path import exists
+from tuf.repository_tool import load_repository, create_new_repository
 from tuf.repository_tool import import_rsa_privatekey_from_file
 from tuf.repository_tool import import_rsa_publickey_from_file
+
+"""
+Days until the expiration of root.json. After this ammount of days the TUF
+client won't accept this file.
+"""
+EXPIRATION_DAYS = 365
 
 
 def usage():
@@ -71,7 +80,7 @@ class Repo(object):
 
     def build(self, root_pub_path, targets_pub_path, timestamp_pub_path):
         """
-        Create a new repo
+        Create or update the repo
 
         :param root_pub_path: path where the public root key lives
         :type root_pub_path: str
@@ -80,11 +89,17 @@ class Repo(object):
         :param timestamp_pub_path: path where the public timestamp key lives
         :type timestamp_pub_path: str
         """
-        repository = create_new_repository(self._repo_path)
+        if exists(self._repo_path) and listdir(self._repo_path) != []:
+            repository = load_repository(self._repo_path)
+        else:
+            repository = create_new_repository(self._repo_path)
 
         pub_root_key = import_rsa_publickey_from_file(root_pub_path)
         repository.root.add_verification_key(pub_root_key)
         repository.root.load_signing_key(self._key)
+        repository.root.expiration = (
+            datetime.datetime.now() +
+            datetime.timedelta(days=EXPIRATION_DAYS))
 
         pub_target_key = import_rsa_publickey_from_file(targets_pub_path)
         repository.targets.add_verification_key(pub_target_key)
@@ -95,7 +110,10 @@ class Repo(object):
         pub_timestamp_key = import_rsa_publickey_from_file(timestamp_pub_path)
         repository.timestamp.add_verification_key(pub_timestamp_key)
 
-        repository.write_partial()
+        try:
+            repository.write_partial()
+        except:
+            pass
 
 
 if __name__ == "__main__":
