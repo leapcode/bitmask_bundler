@@ -154,11 +154,13 @@ install_sumo(){
 
     _cdsitepackages
 
-    # the file name is like 'leap.bitmask-0.9.0rc1-12-g59bc704-SUMO.tar.gz'
+    # the file name may be like 'leap.bitmask-0.9.0rc1-12-g59bc704-SUMO.tar.gz',
+    # but it also can be 'leap.bitmask-latest-SUMO.tar.gz'
     # and the root path inside the archive for that file would be
-    # 'leap.bitmask-0.9.0rc1-12-g59bc704-SUMO'
-    base_path=`basename $SUMO_PATH .tar.gz`
-    tar xzf $SUMO_PATH $base_path/src/leap/ --strip-components=2
+    # 'leap.bitmask-0.9.0rc1-12-g59bc704-SUMO' in both cases.
+    base_path=`tar tzf $SUMO_PATH | head -n 1`
+    target_subpath=src/leap
+    tar xzf $SUMO_PATH $base_path$target_subpath --strip-components=2
 }
 
 add_files(){
