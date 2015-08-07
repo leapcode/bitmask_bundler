@@ -70,7 +70,7 @@ install_pyinstaller(){
     cd $REPOS_ROOT
 
     if [ ! -d pyinstaller ]; then
-        git clone https://github.com/pyinstaller/pyinstaller.git --depth 1
+        git clone https://github.com/kalikaneko/pyinstaller.git --branch feature/pyside-hooks --depth 1
         cd pyinstaller
     else
         cd pyinstaller
@@ -117,7 +117,8 @@ install_requirements() {
 
     cd $REPOS_ROOT/bitmask_client/
     make install_base_deps
-    ./pkg/postmkvenv.sh
+    pip install -U --no-index --trusted-host lizard.leap.se --find-links=https://lizard.leap.se/wheels pyside
+    # ./pkg/postmkvenv.sh
 
     # hack to solve gnupg version problem
     pip uninstall -y gnupg && pip install gnupg
