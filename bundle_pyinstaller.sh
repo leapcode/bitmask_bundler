@@ -70,12 +70,15 @@ install_pyinstaller(){
     cd $REPOS_ROOT
 
     if [ ! -d pyinstaller ]; then
+        # git clone https://github.com/pyinstaller/pyinstaller.git --depth 1
+        # HACK: use kali's branch since a needed fix is not merged to upstream yet
         git clone https://github.com/kalikaneko/pyinstaller.git --branch feature/pyside-hooks --depth 1
         cd pyinstaller
     else
         cd pyinstaller
         git fetch origin
-        git reset --hard origin/develop
+        # git reset --hard origin/develop
+        git reset --hard feature/pyside-hooks  # just for kali's fork
     fi
 
     python setup.py develop
@@ -171,10 +174,6 @@ add_files(){
     set -x  # show commands
 
     _cdsitepackages
-
-    dest="$REPOS_ROOT/bitmask_client/pkg/pyinst/cryptography/"
-    mkdir -p $dest
-    cp cryptography/hazmat/bindings/openssl/src/osrandom_engine.{c,h} $dest
 
     dest="$REPOS_ROOT/bitmask_client/dist/bitmask/u1db/backends/"
     mkdir -p $dest
