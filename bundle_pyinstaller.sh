@@ -283,7 +283,7 @@ clone_repos
 install_requirements
 install_sumo $sumo_path
 tweak_zope
-add_files
 run_pyinstaller
+add_files
 tweak_linux
 archive_bundle
