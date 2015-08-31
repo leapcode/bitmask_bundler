@@ -1,5 +1,6 @@
 {
   "version": "nightly",
+  "tuf_repo": "",
   "bitmask_client": "develop",
   "soledad": "develop",
   "leap_pycommon": "develop",
