@@ -47,9 +47,9 @@ BINARY_COPIER="$SCRIPT_DIR/copy-binaries.sh"
 ROOT_JSON="$SCRIPT_DIR/root.json"
 
 # picked from https://github.com/OpenVPN/openvpn/releases
-OPENVPN_VERSION="v2.3.6"
+OPENVPN_VERSION="v2.3.8"
 
-BOOST_MINOR="57"  # Minor version
+BOOST_MINOR="59"  # Minor version
 BOOST_NAME="boost_1_${BOOST_MINOR}_0"
 
 mkdir -p $BASE
@@ -74,11 +74,12 @@ build_boost() {
     cd $BASE
 
     wget -c http://ufpr.dl.sourceforge.net/project/boost/boost/1.${BOOST_MINOR}.0/${BOOST_NAME}.tar.bz2
-    tar xjf ${BOOST_NAME}.tar.bz2
 
-    # NOTE: this md5 is the only thing that they provide to verification.
+    # NOTE: md5 is the only thing that they provide to verification.
     # for more information see: https://leap.se/code/issues/6296
-    echo "1be49befbdd9a5ce9def2983ba3e7b76  boost_1_57_0.tar.bz2" | md5sum -c -
+    echo "727a932322d94287b62abb1bd2d41723eec4356a7728909e38adb65ca25241ca  boost_1_59_0.tar.bz2" | sha256sum -c
+
+    tar xjf ${BOOST_NAME}.tar.bz2
 
     cd $BOOST_NAME/tools/build/
     ./bootstrap.sh --with-toolset=gcc
@@ -206,6 +207,11 @@ run_bundler() {
 
     # uncomment the following line if you want to do a pause before the python setup in order to do some tweaks on the cloned repos.
     # read -p "Waiting to 'pythonsetup' ... press <Enter> to continue, <Ctrl>+C to exit. "
+
+    # pin pyzmq version, 14.7.0 doesn't work
+    sed 's/pyzmq>=14.4.1/pyzmq==14.6.0/' -i bundler.output/leap_pycommon/pkg/requirements.pip
+    sed 's/^pyzmq$/pyzmq==14.6.0/' -i bundler.output/bitmask_client/pkg/requirements.pip
+
     $bundler --do pythonsetup
 
     # hack to solve gnupg version problem

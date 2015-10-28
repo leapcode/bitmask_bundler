@@ -555,7 +555,7 @@ class CopyMisc(Action):
 
         cp(_convert_path_for_win(
             os.path.join(self._basedir,
-                         "bitmask_client", "relnotes.txt")),
+                         "bitmask_client", "release-notes.rst")),
            _convert_path_for_win(os.path.join(self._basedir, "Bitmask")))
 
         launcher_path = os.path.join(self._basedir, "Bitmask", "launcher.conf")
@@ -604,7 +604,7 @@ class DmgIt(Action):
         template_dir = os.path.join(self._basedir, "Bitmask")
         mkdir("-p", dmg_dir)
         cp("-R", os.path.join(template_dir, "Applications"), dmg_dir)
-        cp("-R", os.path.join(template_dir, "relnotes.txt"), dmg_dir)
+        cp("-R", os.path.join(template_dir, "release-notes.rst"), dmg_dir)
         cp("-R", os.path.join(template_dir, "Bitmask.app"), dmg_dir)
         cp(os.path.join(self._basedir,
                         "leap_assets",

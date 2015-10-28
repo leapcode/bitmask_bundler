@@ -3,7 +3,7 @@
 set -e  # Exit immediately if a command exits with a non-zero status.
 
 BASE='/home/leap/bitmask.bundle'
-BOOST_MINOR="57"
+BOOST_MINOR="59"
 BOOST="$BASE/boost_1_${BOOST_MINOR}_0"
 
 # Note: we could use:
